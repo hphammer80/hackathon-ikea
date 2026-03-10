@@ -12,8 +12,8 @@ echo "Couchbase Server is ready."
 POOLS_JSON="$(curl -sf http://couchbase-server:8091/pools || true)"
 if echo "$POOLS_JSON" | grep -q '"pools":\[\]'; then
   echo "Couchbase cluster not initialized. Initializing cluster..."
-  curl -v -X POST http://couchbase-server:8091/clusterInit \
-    -d "hostname=couchbase-server.test" \
+  curl -sf -X POST http://couchbase-server:8091/clusterInit \
+    -d "hostname=127.0.0.1" \
     -d "port=8091" \
     -d "username=${COUCHBASE_USERNAME}" \
     -d "password=${COUCHBASE_PASSWORD}" \
