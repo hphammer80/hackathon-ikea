@@ -1,5 +1,6 @@
 #!/bin/sh
 set -e
+set -x
 
 echo "Waiting for Couchbase Server to be ready..."
 until curl -s http://couchbase-server:8091/pools > /dev/null 2>&1; do
@@ -19,18 +20,25 @@ if echo "$POOLS_JSON" | grep -q '"pools":\[\]'; then
     -d "services=kv,index,n1ql" \
     -d "memoryQuota=512" \
     -d "indexMemoryQuota=256" \
-    > /dev/null
+    -d "afamily=ipv4"
   echo "Couchbase cluster initialized."
 fi
 
 # Initialize the bucket if it doesn't exist
 echo "Ensuring bucket exists..."
-curl -sf -X POST http://couchbase-server:8091/pools/default/buckets \
+curl -v -X POST http://couchbase-server:8091/pools/default/buckets \
   -u "${COUCHBASE_USERNAME}:${COUCHBASE_PASSWORD}" \
   -d "name=${COUCHBASE_BUCKET}" \
   -d "ramQuota=256" \
   -d "bucketType=couchbase" \
-  2>/dev/null || echo "Bucket may already exist"
+  || echo "Bucket creation failed or already exists"
+
+echo "Waiting for bucket ${COUCHBASE_BUCKET} to be ready..."
+until curl -sf -u "${COUCHBASE_USERNAME}:${COUCHBASE_PASSWORD}" http://couchbase-server:8091/pools/default/buckets/${COUCHBASE_BUCKET} > /dev/null 2>&1; do
+  echo "Bucket not ready, retrying in 2s..."
+  sleep 2
+done
+echo "Bucket is ready."
 
 # Ensure GSI index storage mode is configured before Sync Gateway creates indexes
 echo "Ensuring index storage mode is set..."
